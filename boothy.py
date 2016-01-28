@@ -31,6 +31,48 @@ def screen_update(screen, text, fsize=500):
 	screen.blit(background, (0, 0))
 	pygame.display.flip()
 
+def home_screen(screen):
+	screen1 = pygame.Surface(screen.get_size())
+	screen1 = screen1.convert()
+	screen1.fill((255, 255, 255))
+
+	screen_info = pygame.display.Info()
+	w, h = screen_info.current_w, screen_info.current_h
+	
+	title_font = pygame.font.Font(font_paths['MAIN'], h/4)
+	title_text = title_font.render('Photo Booth', 1, (0,0,0))
+	title_rect = title_text.get_rect()
+	title_rect.centerx = screen1.get_rect().centerx
+	title_rect.centery = screen1.get_rect().centery
+	screen1.blit(title_text, title_rect)
+
+	heart1 = pygame.transform.scale(pygame.image.load('static/heart-1.png'), (h/5, h/5))
+	heart2 = pygame.transform.scale(pygame.image.load('static/heart-2.png'), (h/6, h/6))
+	screen1.blit(heart1, (h/15,h/15))
+	screen1.blit(heart2, (h/4,h/7))
+
+	screen2 = screen1.copy()
+	screen3 = screen1.copy()
+
+	action_font = pygame.font.Font(font_paths['MAIN'], h/10)
+	
+	photo_action_text = action_font.render('Left button for photos', 1, (0,0,0))
+	photo_action_rect = photo_action_text.get_rect()
+	photo_action_rect.centerx = screen1.get_rect().centerx
+	photo_action_rect.centery = screen1.get_rect().centery + (h/4)
+	screen1.blit(photo_action_text, photo_action_rect) 
+	
+	video_action_text = action_font.render('Right button for video', 1, (0,0,0))
+	video_action_rect = video_action_text.get_rect()
+	video_action_rect.centerx = screen1.get_rect().centerx
+	video_action_rect.centery = screen1.get_rect().centery + (h/4)
+	screen2.blit(video_action_text, video_action_rect) 
+
+	screen_order = [screen1, screen3, screen2, screen3]
+	for n in range(1,12):
+		screen.blit(screen_order[n%4], (0, 0))
+		pygame.display.flip()
+		time.sleep(2)
 
 def preview_fade(preview, end_alpha, sec):
 	delta = end_alpha - preview.alpha
@@ -81,12 +123,16 @@ def main():
 	pygame.event.clear()
 	
 	while True:
-		screen_update(screen, 'Photo Booth', 250)
+		home_screen(screen)
+		#screen_update(screen, 'Photo Booth', 250)
 
 		pygame.event.wait()
 		if pygame.key.get_pressed()[K_ESCAPE]:
 			sys.exit()
 		
+		if pygame.key.get_pressed()[K_0]:
+			run_photos()
+	
 		screen_update(screen, '')
 		preview_fade(camera.preview, 125, 3) 
 		
@@ -117,18 +163,23 @@ def main():
 		source = '\n'.join(object.readlines())
 		matches = re.findall('<a class="link" href="?\'?([^"\'>]*)', source)
 		
-		jump = int(round(30.0 / args.striplength))
-		for n, photo in enumerate(range(0, 29, jump)):
-			file_name = matches[photo]
-			#screen_update(screen, 'Downloading %i/%i' %(n+1, args.striplength), 200)
+		if args.mode == 'still':
+			download_list = matches
+		elif args.mode == 'burst':
+			download_list = []	
+			jump = int(round(30.0 / args.striplength))
+			for n, photo in enumerate(range(0, 29, jump)):
+				download_list.append(matches[photo])
+		
+		camera.preview.alpha = 0
+		
+		for file_name in download_list:	
 			url = base_url + file_name
 			download_result = wget.download(url)
 			print download_result
 			
 			img = pygame.transform.scale(pygame.image.load(file_name), (w, h))
 			screen.blit(img,(0,0))
-			if n == 0:
-				camera.preview.alpha = 0
 			pygame.display.flip()
 	
 		gopro.command('delete_all')
@@ -136,7 +187,6 @@ def main():
 
 		screen_update(screen, '')
 		preview_fade(camera.preview, 75, 3)
-		
 		pygame.event.clear()
 						
 if __name__ == '__main__':
