@@ -9,6 +9,7 @@ import wget
 import goprohero
 import settings
 import argparse
+import itertools
 
 from pygame.locals import *
 
@@ -69,10 +70,15 @@ def home_screen(screen):
 	screen2.blit(video_action_text, video_action_rect) 
 
 	screen_order = [screen1, screen3, screen2, screen3]
-	for n in range(1,12):
-		screen.blit(screen_order[n%4], (0, 0))
+	for s in itertools.cycle(screen_order):
+		event = pygame.event.poll()
+		if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+			sys.exit()
+		elif event.type == pygame.KEYDOWN and event.key == pygame.K_0:
+			return
+		screen.blit(s, (0, 0))
 		pygame.display.flip()
-		time.sleep(2)
+		time.sleep(1.5)
 
 def preview_fade(preview, end_alpha, sec):
 	delta = end_alpha - preview.alpha
@@ -124,15 +130,7 @@ def main():
 	
 	while True:
 		home_screen(screen)
-		#screen_update(screen, 'Photo Booth', 250)
 
-		pygame.event.wait()
-		if pygame.key.get_pressed()[K_ESCAPE]:
-			sys.exit()
-		
-		if pygame.key.get_pressed()[K_0]:
-			run_photos()
-	
 		screen_update(screen, '')
 		preview_fade(camera.preview, 125, 3) 
 		
