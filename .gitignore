@@ -1,0 +1,7 @@
+venv
+trash
+goprohero
+settings.py
+*.pyc
+*.JPG
+*.swp
