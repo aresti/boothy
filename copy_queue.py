@@ -7,20 +7,15 @@ import glob
 import time
 
 class FileCopy(threading.Thread):
+
 	def __init__(self, queue, files, dir):
 		threading.Thread.__init__(self)
 		self.queue = queue
 		self.dir = dir
-		self.files = list(files)  # copy list
-		if not os.path.isdir(dir):
-			raise ValueError('%s is not a directory' % dir)
-		for f in files:
-			if not os.path.exists(f):
-				raise ValueError('%s does not exist' % f)
+		self.files = files
 
 	def run(self):
-		print 'Run function'
-		# This puts one object into the queue for each file,
+		# Copy files then add them to the queue
 		for f in self.files:
 			exists_path = self.dir + f.split('/')[-1]
 			if os.path.exists(exists_path):
