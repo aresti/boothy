@@ -10,6 +10,7 @@ import goprohero
 import settings
 import argparse
 import itertools
+import logging
 
 from pygame.locals import *
 
@@ -72,10 +73,11 @@ def home_screen(screen):
 	screen_order = [screen1, screen3, screen2, screen3]
 	for s in itertools.cycle(screen_order):
 		event = pygame.event.poll()
+		pygame.event.clear()
 		if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
 			sys.exit()
 		elif event.type == pygame.KEYDOWN and event.key == pygame.K_0:
-			return
+			return 0
 		screen.blit(s, (0, 0))
 		pygame.display.flip()
 		time.sleep(1.5)
@@ -98,12 +100,77 @@ def countdown(n, screen):
 		screen_update(screen, each)
 		time.sleep(1)
 
-def main():	
+def still_run(screen, gopro, camera, mode, striplength, cdn):
+	w, h = screen.get_size()
+
+	screen_update(screen, '')
+	preview_fade(camera.preview, 125, 3) 
+	
+	if mode == 'burst':
+		countdown(cdn, screen)
+		screen_update(screen, 'Capturing!', 200)
+		gopro.command('record', 'on')
+		time.sleep(4)
+
+		for i, attempt in enumerate(range(100)):
+			screen_update(screen, 'Processing' + '.'*(i%6), 200)
+			time.sleep(1)
+			if gopro.status()['npics'] == 30:
+				break	
+	elif mode == 'still':
+		for _ in range(striplength):
+			countdown(countdown, screen)
+			screen_update(screen, 'Cheese!', 200)
+			time.sleep(1)
+			gopro.command('record', 'on')
+		time.sleep(2)
+
+	screen_update(screen, 'Photos coming up!', 200)
+
+	base_url = 'http://10.5.5.9:8080/DCIM/100GOPRO/'
+	matches = ''
+	object = urllib2.urlopen(base_url)
+	source = '\n'.join(object.readlines())
+	matches = re.findall('<a class="link" href="?\'?([^"\'>]*)', source)
+	
+	if mode == 'still':
+		download_list = matches
+	elif mode == 'burst':
+		download_list = []	
+		jump = int(round(30.0 / striplength))
+		for n, photo in enumerate(range(0, 29, jump)):
+			download_list.append(matches[photo])
+	
+	camera.preview.alpha = 0
+	
+	for file_name in download_list:	
+		url = base_url + file_name
+		download_result = wget.download(url)
+		print download_result
+	
+		img = pygame.transform.scale(pygame.image.load(file_name), (w, h))
+		screen.blit(img,(0,0))
+		pygame.display.flip()
+
+	gopro.command('delete_all')
+	time.sleep(4)
+
+	screen_update(screen, '')
+	preview_fade(camera.preview, 75, 3)
+
+def main():
 	parser = argparse.ArgumentParser(description='Run Boothy...')
 	parser.add_argument('--striplength', help='Number of photos to take', type=int, default=3)
 	parser.add_argument('--mode', choices=['burst', 'still'], help='Choose the GoPro capture mode', default='burst')
 	parser.add_argument('--countdown', help='Length of countdown', type=int, default=5)
 	args = parser.parse_args()
+
+	logger = logging.getLogger(__name__)
+	logger.setLevel(logging.INFO)
+	handler = logging.FileHandler('boothy.log')
+	handler.setLevel(logging.INFO)
+	logger.addHandler(handler)
+	logger.info('Boothy started')
 
 	camera = picamera.PiCamera()
 	camera.vflip = True
@@ -129,63 +196,11 @@ def main():
 	pygame.event.clear()
 	
 	while True:
-		home_screen(screen)
-
-		screen_update(screen, '')
-		preview_fade(camera.preview, 125, 3) 
-		
-		if args.mode == 'burst':
-			countdown(args.countdown, screen)
-			screen_update(screen, 'Capturing!', 200)
-			gopro.command('record', 'on')
-			time.sleep(4)
-
-			for i, attempt in enumerate(range(100)):
-				screen_update(screen, 'Processing' + '.'*(i%6), 200)
-				time.sleep(1)
-				if gopro.status()['npics'] == 30:
-					break	
-		elif args.mode == 'still':
-			for _ in range(args.striplength):
-				countdown(args.countdown, screen)
-				screen_update(screen, 'Cheese!', 200)
-				time.sleep(1)
-				gopro.command('record', 'on')
-			time.sleep(2)
-	
-		screen_update(screen, 'Photos coming up!', 200)
-
-		base_url = 'http://10.5.5.9:8080/DCIM/100GOPRO/'
-		matches = ''
-		object = urllib2.urlopen(base_url)
-		source = '\n'.join(object.readlines())
-		matches = re.findall('<a class="link" href="?\'?([^"\'>]*)', source)
-		
-		if args.mode == 'still':
-			download_list = matches
-		elif args.mode == 'burst':
-			download_list = []	
-			jump = int(round(30.0 / args.striplength))
-			for n, photo in enumerate(range(0, 29, jump)):
-				download_list.append(matches[photo])
-		
-		camera.preview.alpha = 0
-		
-		for file_name in download_list:	
-			url = base_url + file_name
-			download_result = wget.download(url)
-			print download_result
-			
-			img = pygame.transform.scale(pygame.image.load(file_name), (w, h))
-			screen.blit(img,(0,0))
-			pygame.display.flip()
-	
-		gopro.command('delete_all')
-		time.sleep(4)
-
-		screen_update(screen, '')
-		preview_fade(camera.preview, 75, 3)
-		pygame.event.clear()
+		action = home_screen(screen)
+		if action == 0:
+			still_run(screen, gopro, camera, args.mode, args.striplength, args.countdown)
+		elif action == 1:
+			video_run(screen, gopro, camera)
 						
 if __name__ == '__main__':
 	main()
