@@ -15,6 +15,7 @@ def main():
 	parser.add_argument('--striplength', help='Number of photos to take', type=int, default=3)
 	parser.add_argument('--mode', choices=['burst', 'still'], help='Choose the GoPro capture mode', default='still')
 	parser.add_argument('--countdown', help='Length of countdown', type=int, default=3)
+	parser.add_argument('--video_time', help='Length of video', type=int, default=45)
 	args = parser.parse_args()
 
 	logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ def main():
 		|     '--'     |
 	        '--------------'
 
-	Photobooth by Andy Smith and Josh Quick
+    Photobooth by Andy Smith and Josh Quick
 	"""
 	time.sleep(2)
 
@@ -46,7 +47,7 @@ def main():
 		if action == 0:
 			pb.photo_run()
 		elif action == 1:
-			pb.video_run()
+			pb.video_run(args.video_time)
 		elif action == -1:
 			sys.exit()
 						

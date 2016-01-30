@@ -41,7 +41,11 @@ class PhotoBooth():
 	def gopro_init(self):
 		self.gopro = goprohero.GoProHero(password=settings.gopro['passwd'])
 		self.gopro.base_url = 'http://' + settings.gopro['ip']
-		if self.gopro.status()['npics']:
+		for command, value in settings.gopro['init']:
+			self.gopro.command(command, value)
+			time.sleep(2)
+		status = self.gopro.status()
+		if status['npics'] or status['nvids']:
 			time.sleep(1)
 			self.gopro.command('delete_all')	
 			time.sleep(10)
@@ -102,10 +106,13 @@ class PhotoBooth():
 		for s in itertools.cycle(screen_order):
 			event = pygame.event.poll()
 			pygame.event.clear()
-			if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-				return -1
-			elif event.type == pygame.KEYDOWN and event.key == pygame.K_0:
-				return 0
+			if event.type == pygame.KEYDOWN:
+				if event.key == pygame.K_ESCAPE:
+					return -1
+				elif event.key == pygame.K_0:
+					return 0
+				elif event.key == pygame.K_1:
+					return 1
 			self.display.blit(s, (0, 0))
 			pygame.display.flip()
 			time.sleep(1.5)
@@ -180,6 +187,51 @@ class PhotoBooth():
 			img = pygame.transform.scale(pygame.image.load(file_name), (self.display_w, self.display_h))
 			self.display.blit(img,(0,0))
 			pygame.display.flip()
+
+		self.gopro.command('delete_all')
+		time.sleep(4)
+
+		self.display_update('')
+		self.preview_fade(75, 3)
+
+
+	def video_run(self, record_time):	
+		self.gopro.command('mode', 'video')
+		time.sleep(1)
+
+		self.display_update('Press any button to record', 100)
+		
+		pygame.event.wait()
+		self.display_update('')
+		self.preview_fade(200, 3)
+		self.gopro.command('record', 'on')
+	
+		for n in range(record_time, 0, -1):
+			self.display_update(n, 300)	
+			time.sleep(1)
+	
+		self.gopro.command('record', 'off')
+		time.sleep(1)
+	
+		self.display_update('Processing video', 200)
+
+		base_url = self.gopro.base_url + '/DCIM/100GOPRO/'
+		matches = ''
+		url_handle = urllib2.urlopen(base_url)
+		source = '\n'.join(url_handle.readlines())
+		matches = re.findall('<a class="link" href="?\'?([^"\'>]*)', source)
+		download_list = matches
+		
+		self.camera.preview.alpha = 0
+		
+		for file_name in download_list:
+			img_url = base_url + file_name
+			download_result = wget.download(img_url)
+			print download_result
+		
+			#img = pygame.transform.scale(pygame.image.load(file_name), (self.display_w, self.display_h))
+			#self.display.blit(img,(0,0))
+			#pygame.display.flip()
 
 		self.gopro.command('delete_all')
 		time.sleep(4)
