@@ -39,11 +39,11 @@ class PhotoBooth():
 
 
 	def gopro_init(self):
+		# fps, fov, lowlight, orientation?
 		self.gopro = goprohero.GoProHero(password=settings.gopro['passwd'])
 		self.gopro.base_url = 'http://' + settings.gopro['ip']
 		for command, value in settings.gopro['init']:
 			self.gopro.command(command, value)
-			time.sleep(2)
 		status = self.gopro.status()
 		if status['npics'] or status['nvids']:
 			time.sleep(1)
@@ -90,20 +90,20 @@ class PhotoBooth():
 
 		action_font = pygame.font.Font(self.font_paths['MAIN'], h/10)
 	
-		photo_action_text = action_font.render('Left button for photos', 1, (0,0,0))
+		photo_action_text = action_font.render('Choose photos or video guestbook!', 1, (0,0,0))
 		photo_action_rect = photo_action_text.get_rect()
 		photo_action_rect.centerx = screen1.get_rect().centerx
 		photo_action_rect.centery = screen1.get_rect().centery + (h/4)
 		screen1.blit(photo_action_text, photo_action_rect) 
 		
-		video_action_text = action_font.render('Right button for video', 1, (0,0,0))
-		video_action_rect = video_action_text.get_rect()
-		video_action_rect.centerx = screen1.get_rect().centerx
-		video_action_rect.centery = screen1.get_rect().centery + (h/4)
-		screen2.blit(video_action_text, video_action_rect) 
+		#video_action_text = action_font.render('Right button for video', 1, (0,0,0))
+		#video_action_rect = video_action_text.get_rect()
+		#video_action_rect.centerx = screen1.get_rect().centerx
+		#video_action_rect.centery = screen1.get_rect().centery + (h/4)
+		#screen2.blit(video_action_text, video_action_rect) 
 
-		screen_order = [screen1, screen3, screen2, screen3]
-		for s in itertools.cycle(screen_order):
+		screen_order = [screen1, screen3]
+		for i, s in enumerate(itertools.cycle(screen_order)):
 			event = pygame.event.poll()
 			pygame.event.clear()
 			if event.type == pygame.KEYDOWN:
@@ -115,7 +115,10 @@ class PhotoBooth():
 					return 1
 			self.display.blit(s, (0, 0))
 			pygame.display.flip()
-			time.sleep(1.5)
+			if i%2 == 1:
+				time.sleep(0.5)
+			else:
+				time.sleep(2)
 
 	def preview_fade(self, end_alpha, sec):
 		preview = self.camera.preview
@@ -154,9 +157,11 @@ class PhotoBooth():
 				if self.gopro.status()['npics'] == 30:
 					break	
 		elif self.photo_mode == 'still':
-			for _ in range(self.striplength):
+			for photo in range(self.striplength):
+				self.display_update('Photo %i of %i' % (photo + 1, self.striplength), 200)
+				time.sleep(2)
 				self.countdown(self.cntdwn)
-				self.display_update('Cheese!', 200)
+				self.display_update('Smile!', 300)
 				time.sleep(1)
 				self.gopro.command('record', 'on')
 			time.sleep(2)
@@ -220,7 +225,7 @@ class PhotoBooth():
 		url_handle = urllib2.urlopen(base_url)
 		source = '\n'.join(url_handle.readlines())
 		matches = re.findall('<a class="link" href="?\'?([^"\'>]*)', source)
-		download_list = matches
+		download_list = [m for m in matches if m[-4:] == ".MP4"]
 		
 		self.camera.preview.alpha = 0
 		
@@ -229,10 +234,6 @@ class PhotoBooth():
 			download_result = wget.download(img_url)
 			print download_result
 		
-			#img = pygame.transform.scale(pygame.image.load(file_name), (self.display_w, self.display_h))
-			#self.display.blit(img,(0,0))
-			#pygame.display.flip()
-
 		self.gopro.command('delete_all')
 		time.sleep(4)
 
