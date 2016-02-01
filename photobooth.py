@@ -44,6 +44,7 @@ class PhotoBooth():
 		self.gopro.base_url = 'http://' + settings.gopro['ip']
 		for command, value in settings.gopro['init']:
 			self.gopro.command(command, value)
+			time.sleep(1)
 		status = self.gopro.status()
 		if status['npics'] or status['nvids']:
 			time.sleep(1)

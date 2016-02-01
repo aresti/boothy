@@ -3,19 +3,26 @@
 # www.github.com/aresti/boothy.git
 
 import sys
+import os
 import argparse
 import logging
 import photobooth
 import copy_queue
 import time
+import glob
+import Queue
 
 
 def main():
 	parser = argparse.ArgumentParser(description='Run Boothy...')
-	parser.add_argument('--striplength', help='Number of photos to take', type=int, default=3)
-	parser.add_argument('--mode', choices=['burst', 'still'], help='Choose the GoPro capture mode', default='still')
+	parser.add_argument('--striplength', help='Number of photos to take', 
+			    type=int, default=3)
+	parser.add_argument('--mode', choices=['burst', 'still'], 
+			    help='Choose the GoPro capture mode', default='still')
 	parser.add_argument('--countdown', help='Length of countdown', type=int, default=3)
-	parser.add_argument('--video_time', help='Length of video', type=int, default=45)
+	parser.add_argument('--video_time', help='Length of video', type=int, default=30)
+	parser.add_argument('--storage_volume', help='Location to copy files to', 
+			    default='/media/UNTITLED/BOOTHY_STORE')
 	args = parser.parse_args()
 
 	logger = logging.getLogger(__name__)
@@ -37,6 +44,13 @@ def main():
     Photobooth by Andy Smith and Josh Quick
 	"""
 	time.sleep(2)
+
+	#will always be the same as the wget command
+	watch_dir = '/home/pi/pibooth/'
+	if not os.path.exists(volume):
+		os.makedirs(volume)
+	queue = Queue.Queue()
+	copythread = copy_queue.FileCopy(queue, watch_dir, volume)
 
 	pb = photobooth.PhotoBooth(logger, args.mode, args.countdown, args.striplength)	
 	pb.camera.start_preview()
