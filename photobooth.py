@@ -1,3 +1,4 @@
+import os
 import time
 import picamera
 import pygame
@@ -8,23 +9,38 @@ import wget
 import goprohero
 import settings
 import itertools
+import copy_queue
+import Queue
 
 from pygame.locals import *
 
+
 class PhotoBooth():
 
-	def __init__(self, logger, photo_mode='still', cntdwn=3, striplength=4):
+	def __init__(self, logger, watch_dir, storage_volume, 
+		     photo_mode='still', cntdwn=3, striplength=4, exit=False):
 		self.photo_mode = photo_mode
 		self.cntdwn = cntdwn
 		self.striplength = striplength
 		self.logger = logger
+		self.watch_dir = watch_dir
+		self.storage_volume = storage_volume
+		self.exit = exit
 		self.font_paths = {}
 		for f in settings.fonts:
 			self.font_paths[f] = pygame.font.match_font(settings.fonts[f])
 	
 		self.camera_init()
 		self.pygame_init()
-		self.gopro_init()	
+		self.gopro_init()
+		self.filecopy_init()
+
+	def filecopy_init(self):
+		if not os.path.exists(self.storage_volume):
+			os.makedirs(self.storage_volume)
+		self.queue = Queue.Queue()
+		self.filecopy = copy_queue.FileCopy(self.watch_dir, self.storage_volume, self.queue)
+		self.filecopy.start()
 
 	def camera_init(self):
 		self.camera = picamera.PiCamera()
@@ -109,6 +125,8 @@ class PhotoBooth():
 			pygame.event.clear()
 			if event.type == pygame.KEYDOWN:
 				if event.key == pygame.K_ESCAPE:
+					self.filecopy.exit = True
+					self.filecopy.join()
 					return -1
 				elif event.key == pygame.K_0:
 					return 0
@@ -188,11 +206,11 @@ class PhotoBooth():
 		for file_name in download_list:	
 			img_url = base_url + file_name
 			download_result = wget.download(img_url)
-			print download_result
-		
+			print download_result	
 			img = pygame.transform.scale(pygame.image.load(file_name), (self.display_w, self.display_h))
 			self.display.blit(img,(0,0))
 			pygame.display.flip()
+			self.queue.put(file_name)
 
 		self.gopro.command('delete_all')
 		time.sleep(4)

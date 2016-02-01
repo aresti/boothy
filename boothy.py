@@ -45,14 +45,9 @@ def main():
 	"""
 	time.sleep(2)
 
-	#will always be the same as the wget command
-	watch_dir = '/home/pi/pibooth/'
-	if not os.path.exists(volume):
-		os.makedirs(volume)
-	queue = Queue.Queue()
-	copythread = copy_queue.FileCopy(queue, watch_dir, volume)
-
-	pb = photobooth.PhotoBooth(logger, args.mode, args.countdown, args.striplength)	
+	watch_dir = '/home/pi/pibooth'
+	pb = photobooth.PhotoBooth(logger, watch_dir, args.storage_volume, args.mode, 
+				   args.countdown, args.striplength)	
 	pb.camera.start_preview()
 	pb.camera.preview.alpha = 75
 

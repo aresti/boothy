@@ -40,28 +40,3 @@ class FileCopy(threading.Thread):
 					print 'Completed move', f
 				self.queue.task_done()
 
-def main():
-	#volume = '/media/UNTITLED/' + 'BOOTHY_STORE'
-	watch_dir = '/Users/josh/Downloads/boothy/'
-	volume = '/Users/josh/Downloads/boothy/' + 'test/'	
-	if not os.path.exists(volume):
-		os.makedirs(volume)
-	queue = Queue.Queue()
-	copythread = FileCopy(watch_dir, volume, queue)
-	copythread.start()
-
-	try:
-		while True:
-			files = glob.glob(watch_dir + '*jpg')
-			if files:
-				print 'Queueing %s %s' %(len(files), 
-						       ('file' if len(files) == 1 else 'files'))
-				for f in files:
-					copythread.queue.put(f)
-			time.sleep(2)
-	except KeyboardInterrupt:
-		copythread.exit = True
-		copythread.join()
-
-if __name__ == '__main__':
-	main()
