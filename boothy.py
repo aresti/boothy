@@ -30,6 +30,8 @@ def main():
 	handler = logging.FileHandler('boothy.log')
 	handler.setLevel(logging.INFO)
 	logger.addHandler(handler)
+	formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+	handler.setFormatter(formatter)
 	logger.info('Boothy started')
 
 	print """
@@ -45,8 +47,7 @@ def main():
 	"""
 	time.sleep(2)
 
-	watch_dir = '/home/pi/pibooth'
-	pb = photobooth.PhotoBooth(logger, watch_dir, args.storage_volume, args.mode, 
+	pb = photobooth.PhotoBooth(logger, args.storage_volume, args.mode, 
 				   args.countdown, args.striplength)	
 	pb.camera.start_preview()
 	pb.camera.preview.alpha = 75

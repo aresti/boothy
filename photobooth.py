@@ -17,13 +17,12 @@ from pygame.locals import *
 
 class PhotoBooth():
 
-	def __init__(self, logger, watch_dir, storage_volume, 
+	def __init__(self, logger, storage_volume, 
 		     photo_mode='still', cntdwn=3, striplength=4, exit=False):
 		self.photo_mode = photo_mode
 		self.cntdwn = cntdwn
 		self.striplength = striplength
 		self.logger = logger
-		self.watch_dir = watch_dir
 		self.storage_volume = storage_volume
 		self.exit = exit
 		self.font_paths = {}
@@ -38,13 +37,15 @@ class PhotoBooth():
 	def filecopy_init(self):
 		if not os.path.exists(self.storage_volume):
 			os.makedirs(self.storage_volume)
+			self.logger.info('Static dir created at %s' %(self.storage_volume))
 		self.queue = Queue.Queue()
-		self.filecopy = copy_queue.FileCopy(self.watch_dir, self.storage_volume, self.queue)
+		self.filecopy = copy_queue.FileCopy(self.storage_volume, self.queue)
 		self.filecopy.start()
 
 	def camera_init(self):
 		self.camera = picamera.PiCamera()
 		self.camera.vflip = True
+		self.logger.info('PiCamera initialised')
 
 
 	def pygame_init(self):
@@ -52,20 +53,25 @@ class PhotoBooth():
 		self.display_info = pygame.display.Info()
 		self.display_w, self.display_h = self.display_info.current_w, self.display_info.current_h
 		self.display = pygame.display.set_mode((self.display_w,self.display_h),pygame.FULLSCREEN)
-
+		self.logger.info('Pygame initialised')
 
 	def gopro_init(self):
 		# fps, fov, lowlight, orientation?
 		self.gopro = goprohero.GoProHero(password=settings.gopro['passwd'])
 		self.gopro.base_url = 'http://' + settings.gopro['ip']
 		for command, value in settings.gopro['init']:
+			self.logger.info('GoPro API call: %s, %s' %(command, value))
 			self.gopro.command(command, value)
-			time.sleep(1)
+			#time.sleep(1)
+		time.sleep(7)
 		status = self.gopro.status()
+		self.logger.info('GoPro status: %s' %(status))
 		if status['npics'] or status['nvids']:
+			self.logger.info('Files found on GoPro, deleting...')
 			time.sleep(1)
 			self.gopro.command('delete_all')	
 			time.sleep(10)
+		self.logger.info('GoPro initialised')
 	
 
 	def display_update(self, text, fsize=500):
@@ -84,6 +90,7 @@ class PhotoBooth():
 		pygame.display.flip()
 
 	def home_screen(self):
+		self.logger.info('Home screen loop started')
 		w = self.display_w
 		h = self.display_h
 		screen1 = pygame.Surface(self.display.get_size())
@@ -125,6 +132,7 @@ class PhotoBooth():
 			pygame.event.clear()
 			if event.type == pygame.KEYDOWN:
 				if event.key == pygame.K_ESCAPE:
+					self.logger.info('Escape key registered')
 					self.filecopy.exit = True
 					self.filecopy.join()
 					return -1
@@ -159,6 +167,7 @@ class PhotoBooth():
 			time.sleep(1)
 
 	def photo_run(self):
+		self.logger.info('Photo run started: striplength=%s, mode=%s' %(self.striplength, self.photo_mode))
 		self.display_update('')
 		self.preview_fade(125, 3) 
 	
@@ -205,13 +214,15 @@ class PhotoBooth():
 		
 		for file_name in download_list:	
 			img_url = base_url + file_name
+			self.logger.info('Attempting to download ' + img_url)
 			download_result = wget.download(img_url)
-			print download_result	
+			self.logger.info('Download result: ' + download_result)	
 			img = pygame.transform.scale(pygame.image.load(file_name), (self.display_w, self.display_h))
 			self.display.blit(img,(0,0))
 			pygame.display.flip()
 			self.queue.put(file_name)
 
+		self.logger.info('Attempting delete all from GoPro')
 		self.gopro.command('delete_all')
 		time.sleep(4)
 
@@ -220,11 +231,13 @@ class PhotoBooth():
 
 
 	def video_run(self, record_time):	
+		self.logger.info('Video run started')
 		self.gopro.command('mode', 'video')
 		time.sleep(1)
 
 		self.display_update('Press any button to record', 100)
-		
+		self.logger.info('Recording initiated by user keypress')		
+
 		pygame.event.wait()
 		self.display_update('')
 		self.preview_fade(200, 3)
@@ -234,6 +247,7 @@ class PhotoBooth():
 			self.display_update(n, 300)	
 			time.sleep(1)
 	
+		self.logger.info('Recording stopped')
 		self.gopro.command('record', 'off')
 		time.sleep(1)
 	
@@ -250,9 +264,11 @@ class PhotoBooth():
 		
 		for file_name in download_list:
 			img_url = base_url + file_name
+			self.logger.info('Attempting to download video ' + img_url)
 			download_result = wget.download(img_url)
-			print download_result
+			self.logger.info('Download result: ' + download_result)
 		
+		self.logger.info('Attempting to delete all from GoPro')
 		self.gopro.command('delete_all')
 		time.sleep(4)
 
