@@ -9,13 +9,11 @@ import re
 import wget
 import settings
 import itertools
-import copy_queue
-import queue
 import lamp
 import button
+import shutil
 
 from pygame.locals import *
-
 
 class PhotoBooth():
 
@@ -30,11 +28,10 @@ class PhotoBooth():
         self.font_paths = {}
         for f in settings.fonts:
             self.font_paths[f] = pygame.font.match_font(settings.fonts[f])
-    
+        
         self.camera_init()
         self.pygame_init()
         self.gopro_init()
-        self.filecopy_init()
         self.lamp_init()
         self.button_init()
 
@@ -42,13 +39,12 @@ class PhotoBooth():
         if not os.path.exists(self.storage_volume):
             os.makedirs(self.storage_volume)
             self.logger.info('Static dir created at %s' %(self.storage_volume))
-        self.queue = queue.Queue()
-        self.filecopy = copy_queue.FileCopy(self.storage_volume, self.queue)
-        self.filecopy.start()
 
     def camera_init(self):
         self.camera = picamera.PiCamera()
         self.camera.vflip = True
+        self.camera.start_preview()
+        self.camera.preview.alpha = 75
         self.logger.info('PiCamera initialised')
 
     def lamp_init(self):
@@ -67,7 +63,6 @@ class PhotoBooth():
         self.logger.info('Pygame initialised')
 
     def gopro_init(self):
-        # fps, fov, lowlight, orientation?
         self.gopro = goprohero.GoProHero(password=settings.gopro['passwd'])
         self.gopro.base_url = 'http://' + settings.gopro['ip']
         for command, value in settings.gopro['init']:
@@ -81,7 +76,6 @@ class PhotoBooth():
             time.sleep(1)
             self.gopro.command('delete_all')    
         config = self.gopro.config()
-        self.logger.info('GoPro config: %s' %(config))
         self.logger.info('GoPro initialised')
     
 
@@ -131,12 +125,6 @@ class PhotoBooth():
         photo_action_rect.centery = screen1.get_rect().centery + (h/4)
         screen1.blit(photo_action_text, photo_action_rect) 
         
-        #video_action_text = action_font.render('Right button for video', 1, (0,0,0))
-        #video_action_rect = video_action_text.get_rect()
-        #video_action_rect.centerx = screen1.get_rect().centerx
-        #video_action_rect.centery = screen1.get_rect().centery + (h/4)
-        #screen2.blit(video_action_text, video_action_rect) 
-
         screen_order = [screen1, screen3]
         for i, s in enumerate(itertools.cycle(screen_order)):
             event = pygame.event.poll()
@@ -221,15 +209,15 @@ class PhotoBooth():
         
         self.camera.preview.alpha = 0
         
-        for file_name in download_list:    
-            img_url = base_url + file_name
+        for f in download_list:    
+            img_url = base_url + f
             self.logger.info('Attempting to download ' + img_url)
             download_result = wget.download(img_url)
             self.logger.info('Download result: ' + download_result)    
-            img = pygame.transform.scale(pygame.image.load(file_name), (self.display_w, self.display_h))
+            img = pygame.transform.scale(pygame.image.load(f), (self.display_w, self.display_h))
             self.display.blit(img,(0,0))
             pygame.display.flip()
-            self.queue.put(file_name)
+            shutil.move(f, self.storage_volume)
 
         self.logger.info('Attempting delete all from GoPro')
         self.gopro.command('delete_all')
@@ -270,11 +258,12 @@ class PhotoBooth():
         
         self.camera.preview.alpha = 0
         
-        for file_name in download_list:
-            img_url = base_url + file_name
+        for f in download_list:
+            img_url = base_url + f
             self.logger.info('Attempting to download video ' + img_url)
             download_result = wget.download(img_url)
             self.logger.info('Download result: ' + download_result)
+            shutil.move(f, self.storage_volume)
         
         self.logger.info('Attempting to delete all from GoPro')
         self.gopro.command('delete_all')

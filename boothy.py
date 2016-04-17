@@ -49,8 +49,6 @@ def main():
 
     pb = photobooth.PhotoBooth(logger, args.storage_volume, args.mode, 
                    args.countdown, args.striplength)    
-    pb.camera.start_preview()
-    pb.camera.preview.alpha = 75
 
     while True:
         action = pb.home_screen()

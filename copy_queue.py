@@ -18,8 +18,6 @@ class FileCopy(threading.Thread):
                 time.sleep(1)
             else:
                 f = self.queue.get()
-                exists_path = self.volume + f.split('/')[-1]
                 shutil.move(f, self.volume)
                 print('Completed move', f)
-                self.queue.task_done()
-
+            self.queue.task_done()
