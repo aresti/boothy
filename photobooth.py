@@ -3,7 +3,6 @@ import os
 import time
 import picamera
 import pygame
-import datetime
 import urllib
 import re
 import wget

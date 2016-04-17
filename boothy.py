@@ -7,11 +7,7 @@ import os
 import argparse
 import logging
 import photobooth
-import copy_queue
 import time
-import glob
-import queue
-
 
 def main():
     parser = argparse.ArgumentParser(description='Run Boothy...')
