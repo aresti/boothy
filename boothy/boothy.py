@@ -23,7 +23,7 @@ def main():
 
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    handler = logging.FileHandler('boothy.log')
+    handler = logging.FileHandler('log/boothy.log')
     handler.setLevel(logging.INFO)
     logger.addHandler(handler)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
