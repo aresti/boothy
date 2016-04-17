@@ -1,0 +1,8 @@
+Pillow==3.2.0
+RPi.GPIO==0.6.2
+colorama==0.3.7
+goprohero==0.2.6
+picamera==1.10
+pygame==1.9.2a0
+wget==3.2
+wireless==0.3.2
