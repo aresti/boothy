@@ -78,7 +78,6 @@ class PhotoBooth():
         config = self.gopro.config()
         self.logger.info('GoPro initialised')
     
-
     def display_update(self, text, fsize=500):
         background = pygame.Surface(self.display.get_size())
         background = background.convert()
@@ -169,7 +168,7 @@ class PhotoBooth():
         self.logger.info('Photo run started: striplength=%s, mode=%s' %(self.striplength, self.photo_mode))
         self.display_update('')
         self.preview_fade(125, 3) 
-    
+        self.low_lamp.on()
         self.gopro.command('mode', self.photo_mode)
         
         if self.photo_mode == 'burst':
@@ -177,7 +176,6 @@ class PhotoBooth():
             self.display_update('Capturing!', 200)
             self.gopro.command('record', 'on')
             self.time.sleep(4)
-
             for i, attempt in enumerate(range(100)):
                 self.display_update('Processing' + '.'*(i%6), 200)
                 time.sleep(1)
@@ -190,8 +188,11 @@ class PhotoBooth():
                 self.countdown(self.cntdwn)
                 self.gopro.command('record', 'on')
                 self.display_update('Smile!', 300)
+                self.high_lamp.on()
                 time.sleep(3)
+                self.high_lamp.off()
 
+        self.low_lamp.off()
         self.display_update('Photos coming up!', 200)
 
         base_url = self.gopro.base_url + '/DCIM/100GOPRO/'
@@ -229,6 +230,7 @@ class PhotoBooth():
 
     def video_run(self, record_time):    
         self.logger.info('Video run started')
+        self.low_lamp.on()
         self.gopro.command('mode', 'video')
         time.sleep(1)
 
@@ -246,6 +248,7 @@ class PhotoBooth():
     
         self.logger.info('Recording stopped')
         self.gopro.command('record', 'off')
+        self.low_lamp.off()
         time.sleep(1)
     
         self.display_update('Processing video', 200)
