@@ -10,6 +10,3 @@ class Button():
 
 	def is_pressed(self):
 		return GPIO.input(self.gpio_pin)
-	
-	def __del__(self):
-		GPIO.cleanup()

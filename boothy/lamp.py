@@ -27,6 +27,3 @@ class Lamp():
 		time.sleep(0.2)
 		for p in self.gpio_pins:
 			GPIO.output(p, GPIO.HIGH)
-
-	def __del__(self):
-		GPIO.cleanup()

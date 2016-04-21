@@ -41,7 +41,7 @@ class PhotoBooth():
 
     def camera_init(self):
         self.camera = picamera.PiCamera()
-        self.camera.vflip = True
+        #self.camera.vflip = True
         self.camera.start_preview()
         self.camera.preview.alpha = 75
         self.logger.info('PiCamera initialised')
@@ -130,12 +130,14 @@ class PhotoBooth():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.logger.info('Escape key registered')
-                    self.filecopy.exit = True
-                    self.filecopy.join()
                     return -1
                 elif event.key == pygame.K_0:
                     return 0
                 elif event.key == pygame.K_1:
+                    return 1
+            elif self.photo_button.is_pressed():
+                    return 0
+            elif self.video_button.is_pressed():
                     return 1
             self.display.blit(s, (0, 0))
             pygame.display.flip()
